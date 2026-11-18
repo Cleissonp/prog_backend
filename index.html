@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POO em Java · Controle de Estacionamento</title>
+<style>
+/* =========================================================
+   TEMAS
+   ========================================================= */
+:root{
+  --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",monospace;
+}
+[data-theme="dark"]{
+  --bg:#0e1116; --bg2:#151a21; --bg3:#1c222b; --line:#2a323d;
+  --text:#e9edf2; --muted:#9aa5b4;
+  --accent:#f5c518; --accent-text:#f5c518; --accent-ink:#1a1400;
+  --blue:#4f8cff; --green:#34d27b; --red:#ff6161;
+  --code-bg:#0b0e12; --hl-bg:rgba(245,197,24,.13);
+  --c-plain:#d6dde6; --c-kw:#c099ff; --c-type:#7dcfff; --c-str:#e0b56a;
+  --c-num:#ff9e64; --c-com:#6b7690; --c-fn:#82aaff;
+}
+[data-theme="light"]{
+  --bg:#f4f5f7; --bg2:#ffffff; --bg3:#eceef2; --line:#d5dae2;
+  --text:#14181f; --muted:#566070;
+  --accent:#f5c518; --accent-text:#8a6a00; --accent-ink:#1a1400;
+  --blue:#1d4ed8; --green:#13803d; --red:#c62828;
+  --code-bg:#fbfbfc; --hl-bg:rgba(245,197,24,.28);
+  --c-plain:#1f2937; --c-kw:#7c3aed; --c-type:#0e6ba8; --c-str:#9a5b00;
+  --c-num:#c2410c; --c-com:#8a94a3; --c-fn:#1d4ed8;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
+body.idle{cursor:none}
+
+/* =========================================================
+   PALCO 1280x720 escalado
+   ========================================================= */
+#stage{position:absolute;left:50%;top:50%;width:1280px;height:720px;transform-origin:center center}
+#stage>section{
+  position:absolute;inset:0;padding:52px 72px 44px;
+  display:none;flex-direction:column;font-size:24px;line-height:1.45;
+}
+#stage>section.active{display:flex;animation:entra .35s ease}
+@keyframes entra{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+aside.notes{display:none}
+
+/* Tipografia */
+.kicker{font:700 15px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--accent-text)}
+h1{font-size:68px;line-height:1.05;margin:10px 0 18px;letter-spacing:-.02em;font-weight:800}
+h2{font-size:42px;line-height:1.15;margin:6px 0 22px;letter-spacing:-.01em;font-weight:750}
+h3{font:700 15px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+p{margin:0 0 12px}
+.lead{font-size:28px;color:var(--text)}
+.muted{color:var(--muted)}
+.small{font-size:19px}
+.mono{font-family:var(--mono);font-variant-ligatures:none}
+code.i{font-family:var(--mono);font-variant-ligatures:none;font-size:.9em;background:var(--bg3);border:1px solid var(--line);padding:1px 8px;border-radius:7px}
+.hl-y{color:var(--accent-text);font-weight:700}
+.g{color:var(--green);font-weight:700}
+.r{color:var(--red);font-weight:700}
+.grow{flex:1;min-height:0}
+.center{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.row{display:flex;gap:24px;align-items:center}
+.cols{display:grid;gap:28px;align-items:start}
+
+/* Cartões */
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:22px 26px}
+.card.dash{border-style:dashed;border-width:2px;border-color:var(--blue);background:transparent}
+.card.top-g{border-top:4px solid var(--green)}
+.card.top-r{border-top:4px solid var(--red)}
+.card.top-y{border-top:4px solid var(--accent)}
+.card.top-b{border-top:4px solid var(--blue)}
+.list{margin:0;padding:0;list-style:none}
+.list li{padding:8px 0;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:baseline}
+.list li:last-child{border-bottom:0}
+.list li .k{color:var(--muted);min-width:28px;font-family:var(--mono)}
+
+.callouts{display:flex;flex-direction:column;gap:12px}
+.callout{background:var(--bg2);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:12px;padding:12px 16px;font-size:20px;line-height:1.4}
+.callout b{color:var(--accent-text)}
+.callout.g{border-left-color:var(--green)} .callout.r{border-left-color:var(--red)}
+
+/* Pílulas de estado */
+.pill{display:inline-flex;align-items:center;gap:9px;padding:6px 15px;border-radius:999px;font:700 17px var(--mono);
+  font-variant-ligatures:none;white-space:nowrap}
+.pill::before{content:"";width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+.pill.livre{color:var(--green);background:color-mix(in srgb,var(--green) 13%,transparent);border:1px solid color-mix(in srgb,var(--green) 45%,transparent)}
+.pill.ocupada{color:var(--red);background:color-mix(in srgb,var(--red) 13%,transparent);border:1px solid color-mix(in srgb,var(--red) 45%,transparent)}
+.badge{display:inline-block;font:800 13px var(--sans);letter-spacing:.1em;padding:4px 10px;border-radius:7px;background:var(--accent);color:var(--accent-ink)}
+.kbd{display:inline-block;font:600 18px var(--mono);padding:3px 11px;border-radius:8px;border:1px solid var(--line);
+  border-bottom-width:3px;background:var(--bg3);color:var(--text);line-height:1.3}
+
+/* Fragmentos (aparecem passo a passo) */
+.frag{transition:opacity .35s ease,transform .35s ease,background .3s,border-color .3s}
+.frag:not(.shown):not(.out):not(.mark){opacity:0;transform:translateY(10px)}
+.frag.out.shown{opacity:0;pointer-events:none}
+
+/* =========================================================
+   CÓDIGO
+   ========================================================= */
+pre.code{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:14px;padding:16px 0;
+  font:20px/1.5 var(--mono);font-variant-ligatures:none;color:var(--c-plain);white-space:pre;overflow:hidden;tab-size:4}
+pre.code.sm{font-size:18px}
+pre.code.xs{font-size:17px}
+pre.code code{font:inherit;display:block}
+pre.code .ln{display:block;position:relative;padding:0 20px 0 62px;transition:opacity .25s,background .25s}
+pre.code .ln::before{content:attr(data-label);position:absolute;left:0;width:42px;text-align:right;color:var(--muted);opacity:.45}
+pre.code.focus .ln:not(.hl){opacity:.28}
+pre.code .ln.hl{background:var(--hl-bg);box-shadow:inset 4px 0 0 var(--accent)}
+pre.code .ln.run{background:color-mix(in srgb,var(--blue) 22%,transparent);box-shadow:inset 4px 0 0 var(--blue)}
+pre.code .ln.run-ok{background:color-mix(in srgb,var(--green) 20%,transparent);box-shadow:inset 4px 0 0 var(--green)}
+pre.code .ln.run-no{background:color-mix(in srgb,var(--red) 18%,transparent);box-shadow:inset 4px 0 0 var(--red)}
+.t-kw{color:var(--c-kw)} .t-type{color:var(--c-type)} .t-str{color:var(--c-str)} .t-num{color:var(--c-num)}
+.t-com{color:var(--c-com);font-style:italic} .t-fn{color:var(--c-fn)}
+.t-true{color:var(--green);font-weight:700} .t-false{color:var(--red);font-weight:700}
+.t-bang{color:var(--accent-text);font-weight:800}
+.eval{position:absolute;right:12px;top:50%;transform:translateY(-50%);font:700 14px var(--sans);padding:2px 10px;border-radius:6px;
+  background:var(--bg3);border:1px solid var(--line);color:var(--text)}
+.eval.ok{color:var(--green);border-color:var(--green)} .eval.no{color:var(--red);border-color:var(--red)}
+
+/* Console (sempre escuro, como no IntelliJ) */
+.console{background:#0b0e12;border:1px solid #2a323d;border-radius:12px;overflow:hidden;color:#d6dde6;display:flex;flex-direction:column}
+.console-bar{font:600 13px var(--sans);color:#8b96a5;padding:8px 14px;border-bottom:1px solid #222a35;background:#11161d;display:flex;gap:10px;align-items:center}
+.console-bar::before{content:"▶";color:#34d27b;font-size:11px}
+.console-body{font:17px/1.42 var(--mono);font-variant-ligatures:none;padding:12px 16px;white-space:pre;overflow:hidden}
+.console-body .k{color:#f5c518;font-weight:700}
+.console-body .h{color:#8b96a5}
+.console-body .e{color:#ff8a8a}
+
+/* =========================================================
+   ILUSTRAÇÃO: VAGA VISTA DE CIMA
+   ========================================================= */
+.spot{display:flex;flex-direction:column;align-items:center;gap:12px}
+.spot svg{display:block;height:auto}
+.spot .asfalto{fill:#262a31}
+.spot .faixa{fill:none;stroke:#eceff3;stroke-width:6;stroke-linecap:square}
+.spot .pintura{fill:rgba(255,255,255,.32);font:800 30px var(--sans);text-anchor:middle;letter-spacing:.04em}
+.spot .lataria{fill:#d8dde6} .spot .teto{fill:#c3cad6} .spot .vidro{fill:#24303f}
+.spot .roda{fill:#08090b} .spot .farol{fill:#fff3b8}
+.spot .carro{transition:transform .8s cubic-bezier(.2,.8,.2,1),opacity .5s ease;transform-box:view-box}
+.spot[data-livre="true"] .carro{transform:translateY(330px);opacity:0}
+
+/* Diagrama de estados */
+.dg text{font-family:var(--sans)} .dg .mono{font-family:var(--mono);font-variant-ligatures:none}
+.dg .fg{fill:var(--green)} .dg .fr{fill:var(--red)} .dg .fm{fill:var(--muted)} .dg .ft{fill:var(--text)}
+.dg .box{fill:var(--bg2)} .dg .sg{stroke:var(--green)} .dg .sr{stroke:var(--red)} .dg .sm{stroke:var(--muted)}
+
+/* Painel de LED */
+.led{background:#050607;border:3px solid #2b2f36;border-radius:14px;padding:22px 30px;box-shadow:inset 0 0 30px rgba(0,0,0,.8);text-align:center;min-width:300px}
+.led .t{font:700 18px var(--mono);color:#7d8590;letter-spacing:.2em}
+.led .v{font:800 64px var(--mono);letter-spacing:.12em;color:#3dff8e;text-shadow:0 0 14px #3dff8e,0 0 34px rgba(61,255,142,.5)}
+
+/* Placa P */
+.placaP{width:110px;height:110px;border-radius:18px;background:#1f5fd6;color:#fff;font:900 76px/110px var(--sans);text-align:center;
+  border:5px solid #fff;box-shadow:0 0 0 3px #1f5fd6,0 18px 40px rgba(0,0,0,.35)}
+
+/* Tabela */
+.tbl{width:100%;border-collapse:collapse;font-size:22px}
+.tbl th{font:700 14px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 16px;border-bottom:2px solid var(--line)}
+.tbl td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+
+/* Matriz 2x2 */
+.matriz{display:grid;grid-template-columns:230px 1fr 1fr;gap:14px}
+.matriz .hd{font:700 22px var(--mono);font-variant-ligatures:none;text-align:center;padding:10px;color:var(--text)}
+.matriz .rh{display:flex;align-items:center;justify-content:center}
+.cell{position:relative;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:16px 20px;min-height:150px}
+.cell.ok{border-left:6px solid var(--green)} .cell.no{border-left:6px solid var(--red)}
+.cell .v{font-size:24px;font-weight:750;margin-bottom:4px}
+.cell .m{font:18px var(--mono);font-variant-ligatures:none;color:var(--muted)}
+.cell .badge{position:absolute;top:14px;right:14px}
+
+/* Roteiro de passos */
+.road{display:grid;grid-template-columns:repeat(9,1fr);gap:10px}
+.road div{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 10px;text-align:center;font-size:17px;line-height:1.25}
+.road b{display:block;font:800 26px var(--sans);color:var(--accent-text);margin-bottom:4px}
+.passo{position:absolute;top:52px;right:72px;display:flex;align-items:center;gap:12px;font:700 14px var(--sans);letter-spacing:.12em;color:var(--muted)}
+.passo .seg{display:flex;gap:4px}
+.passo .seg i{width:18px;height:6px;border-radius:3px;background:var(--line)}
+.passo .seg i.on{background:var(--accent)}
+
+/* Diálogo IntelliJ (mock) */
+.ide{background:#1e1f22;border:1px solid #393b40;border-radius:12px;color:#dfe1e5;font:17px var(--sans);overflow:hidden}
+.ide .bar{background:#2b2d30;padding:9px 14px;font-weight:600;font-size:15px;color:#bcbec4;border-bottom:1px solid #393b40}
+.ide .body{padding:16px 18px;display:grid;grid-template-columns:130px 1fr;gap:10px 14px;align-items:center}
+.ide label{color:#9da0a8;text-align:right}
+.ide .f{background:#2b2d30;border:1px solid #4e5157;border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:16px}
+.ide .f.hot{border-color:#f5c518;box-shadow:0 0 0 2px rgba(245,197,24,.25)}
+.tree{font:18px/1.8 var(--mono);font-variant-ligatures:none;background:#1e1f22;border:1px solid #393b40;border-radius:12px;padding:14px 18px;color:#dfe1e5}
+.tree .d{color:#e8bf6a} .tree .p{color:#7dcfff} .tree .c{color:#82aaff}
+
+/* Anatomia */
+.anat{display:flex;justify-content:center;gap:14px;font:34px var(--mono);font-variant-ligatures:none}
+.anat .tok{display:flex;flex-direction:column;align-items:center;gap:12px}
+.anat .tok>span:first-child{padding:6px 12px;border-radius:10px;background:var(--code-bg);border:1px solid var(--line)}
+.anat .lab{font:600 18px var(--sans);color:var(--muted);text-align:center;max-width:220px;line-height:1.3}
+.anat .lab b{color:var(--accent-text);display:block;font-size:20px}
+
+/* Quiz (sem pontuação) */
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.opt{display:flex;gap:16px;align-items:center;background:var(--bg2);border:2px solid var(--line);border-radius:14px;padding:18px 22px;font-size:24px}
+.opt .l{flex:none;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font:800 22px var(--sans);background:var(--bg3);color:var(--muted)}
+.opt.mark.shown{border-color:var(--green);background:color-mix(in srgb,var(--green) 12%,var(--bg2))}
+.opt.mark.shown .l{background:var(--green);color:#04210f}
+
+/* Checklist */
+.check{columns:2;column-gap:40px;font-size:22px}
+.check label{display:flex;gap:14px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line);break-inside:avoid;cursor:pointer}
+.check input{width:24px;height:24px;accent-color:var(--green);flex:none;cursor:pointer}
+.check input:checked+span{color:var(--muted);text-decoration:line-through}
+
+/* Simulador */
+.sim{display:grid;grid-template-columns:600px 1fr;gap:26px;flex:1;min-height:0}
+.sim-side{display:flex;flex-direction:column;gap:14px;min-height:0}
+.sim-top{display:flex;gap:18px;align-items:stretch}
+.mem{flex:1;padding:14px 18px;font:17px/1.75 var(--mono);font-variant-ligatures:none}
+.mem .t{font:700 13px var(--sans);letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.mem .f{display:flex;justify-content:space-between;border-radius:6px;padding:0 6px;transition:background .4s}
+.mem .f span:first-child{color:var(--muted)}
+.mem .f.flash{background:var(--hl-bg)}
+.btns{display:flex;gap:10px}
+.btn{flex:1;border:0;border-radius:11px;padding:12px 14px;font:700 17px var(--mono);font-variant-ligatures:none;cursor:pointer;transition:transform .12s,filter .12s}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.g{background:var(--green);color:#04210f}
+.btn.r{background:var(--red);color:#2a0606}
+.btn.o{background:transparent;color:var(--text);border:1px solid var(--line);font-family:var(--sans)}
+#simConsole{flex:1;min-height:0}
+
+/* =========================================================
+   INTERFACE (barra, progresso, ajuda)
+   ========================================================= */
+#ui{position:fixed;top:14px;right:16px;display:flex;gap:8px;z-index:20;opacity:0;transition:opacity .3s}
+body.ui-on #ui{opacity:1}
+#ui button{width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--bg2);color:var(--text);
+  cursor:pointer;display:grid;place-items:center;font:600 16px var(--sans)}
+#ui button:hover{border-color:var(--accent)}
+#ui svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#progress{position:fixed;left:0;bottom:0;height:4px;background:var(--accent);transition:width .35s ease;z-index:20}
+#count{position:fixed;right:18px;bottom:12px;font:600 13px var(--mono);color:var(--muted);z-index:20}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:40}
+#help.on{display:grid}
+#help .card{width:560px;font-size:18px}
+#help td{padding:6px 10px}
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <button id="bPrev" title="Voltar (←)"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <button id="bNext" title="Avançar (→)"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+  <button id="bTheme" title="Alternar tema (T)"><svg viewBox="0 0 24 24" id="iTheme"></svg></button>
+  <button id="bNotes" title="Notas do apresentador (S)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
+  <button id="bFull" title="Tela cheia (F)"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button id="bHelp" title="Atalhos (?)">?</button>
+</div>
+<div id="progress"></div>
+<div id="count"></div>
+
+<div id="help"><div class="card">
+  <h3>Atalhos</h3>
+  <table>
+    <tr><td><span class="kbd">→</span> <span class="kbd">Espaço</span> <span class="kbd">PgDn</span></td><td>avançar</td></tr>
+    <tr><td><span class="kbd">←</span> <span class="kbd">PgUp</span></td><td>voltar</td></tr>
+    <tr><td><span class="kbd">T</span></td><td>alternar tema claro/escuro</td></tr>
+    <tr><td><span class="kbd">S</span></td><td>abrir notas do apresentador (outra janela)</td></tr>
+    <tr><td><span class="kbd">F</span></td><td>tela cheia</td></tr>
+    <tr><td><span class="kbd">Home</span> <span class="kbd">End</span></td><td>primeiro / último slide</td></tr>
+    <tr><td><span class="kbd">Esc</span></td><td>fechar esta ajuda</td></tr>
+  </table>
+</div></div>
+
+<main id="stage">
+
+<!-- ======================================================= 01 CAPA -->
+<section data-title="Capa">
+  <div class="cols grow" style="grid-template-columns:1fr 330px;align-items:center">
+    <div>
+      <div class="kicker">Programação Orientada a Objetos · Java</div>
+      <h1>Controle de<br>Estacionamento</h1>
+      <p class="lead muted">Uma vaga, duas ações, nenhuma mentira no painel.</p>
+      <div class="row small muted" style="margin-top:30px;gap:14px;flex-wrap:wrap">
+        <span>Aula prática · programação ao vivo</span><span>·</span><span>IntelliJ IDEA + JDK 21</span>
+      </div>
+      <p class="small muted" style="margin-top:46px"><span class="kbd">→</span> avançar &nbsp; <span class="kbd">T</span> tema &nbsp; <span class="kbd">S</span> notas &nbsp; <span class="kbd">?</span> atalhos</p>
+    </div>
+    <div class="row" style="align-items:flex-start;gap:22px">
+      <div class="placaP">P</div>
+      <div class="spot" data-id="A-15" data-livre="false" data-w="190"></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Início (1 min).</b> Apresente o tema: hoje a turma vai construir, junto com você, o mesmo tipo de programa que vai cair na prova.</p>
+    <p>Combine a dinâmica: <b>“Eu digito no IntelliJ, vocês digitam junto. O slide serve para conferir.”</b></p>
+    <p>Deixe o IntelliJ já aberto em segundo plano.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 02 CENA -->
+<section data-title="O problema">
+  <div class="kicker">O problema</div>
+  <h2>O painel diz uma coisa. A vaga diz outra.</h2>
+  <div class="row grow" style="justify-content:center;gap:56px">
+    <div class="led"><div class="t">VAGA A-15</div><div class="v">LIVRE</div></div>
+    <div style="font:300 90px var(--sans);color:var(--muted)">≠</div>
+    <div class="spot" data-id="A-15" data-livre="false" data-w="170"></div>
+  </div>
+  <p class="lead frag" style="text-align:center">Motorista entra, não acha a vaga, dá ré… <span class="r">fila e buzina.</span></p>
+  <p class="lead frag" style="text-align:center;margin-top:6px">Como fazer o sistema <span class="hl-y">saber sempre</span> se a vaga está livre ou ocupada?</p>
+  <aside class="notes">
+    <p><b>Abertura (2 min).</b> “Imagine a entrada de um shopping. O painel diz LIVRE, mas tem carro lá. O que acontece?” Deixe responderem.</p>
+    <p>Avance: fila, buzina. Depois a pergunta-guia da aula.</p>
+    <p>Feche com: <b>“Nosso programa vai guardar o estado da vaga e nunca deixar ele ficar errado.”</b></p>
+  </aside>
+</section>
+
+<!-- ======================================================= 03 OBJETIVO -->
+<section data-title="O que vamos construir">
+  <div class="kicker">Objetivo de hoje</div>
+  <h2>O que vamos construir (e o que a prova pede)</h2>
+  <div class="cols" style="grid-template-columns:1fr 1fr">
+    <div class="card top-b">
+      <h3>Vaga.java</h3>
+      <ul class="list">
+        <li><span class="k">1</span>4 atributos <b>privados</b></li>
+        <li><span class="k">2</span>getter e setter para cada um</li>
+        <li><span class="k">3</span><code class="i">estacionar()</code> — registra a entrada</li>
+        <li><span class="k">4</span><code class="i">retirarVeiculo()</code> — registra a saída</li>
+      </ul>
+    </div>
+    <div class="card top-y">
+      <h3>Main.java</h3>
+      <ul class="list">
+        <li><span class="k">1</span>cria um objeto <code class="i">Vaga</code></li>
+        <li><span class="k">2</span>preenche com os setters (começa <span class="g">livre</span>)</li>
+        <li><span class="k">3</span>mostra os dados com os getters</li>
+        <li><span class="k">4</span>executa os <b>5 testes</b> na ordem</li>
+      </ul>
+    </div>
+  </div>
+  <p class="lead frag" style="margin-top:30px;text-align:center">Ao final da aula, você consegue escrever isso <span class="hl-y">sozinho</span>.</p>
+  <aside class="notes">
+    <p><b>(2 min)</b> Mostre que a aula é o ensaio da prova. Leia os dois cartões rapidamente.</p>
+    <p>Reforce: <b>sem menu, sem Scanner, sem métodos extras.</b> Só isso.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 04 TEM x FAZ -->
+<section data-title="TEM × FAZ">
+  <div class="kicker">Parte 1 · Modelar</div>
+  <h2>Antes do código: pense na vaga</h2>
+  <div class="cols" style="grid-template-columns:1fr 1fr">
+    <div class="card top-b">
+      <h3>O que uma vaga <span style="color:var(--blue)">TEM</span>?</h3>
+      <ul class="list">
+        <li class="frag">um código <span class="muted mono">— A-15</span></li>
+        <li class="frag">um setor <span class="muted mono">— Coberto</span></li>
+        <li class="frag">um andar <span class="muted mono">— 1</span></li>
+        <li class="frag">uma situação <span class="muted mono">— livre ou ocupada</span></li>
+      </ul>
+    </div>
+    <div class="card top-y">
+      <h3>O que uma vaga <span class="hl-y">FAZ</span>?</h3>
+      <ul class="list">
+        <li class="frag">recebe um carro <span class="muted">(entrada)</span></li>
+        <li class="frag">libera o carro <span class="muted">(saída)</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="row frag" style="justify-content:center;gap:40px;margin-top:30px;font-size:30px;font-weight:700">
+    <span><span style="color:var(--blue)">TEM</span> → atributos</span>
+    <span><span class="hl-y">FAZ</span> → métodos</span>
+  </div>
+  <aside class="notes">
+    <p><b>(4 min) Pergunte antes de avançar cada item.</b> “O que uma vaga tem? O que identifica ela?” Revele conforme a turma responder.</p>
+    <p>Depois: “E o que uma vaga faz? Que ações acontecem com ela?”</p>
+    <p>Conclusão no quadro: <b>TEM = atributos · FAZ = métodos</b>. Essa frase resolve metade da prova.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 05 TIPOS -->
+<section data-title="Atributos e tipos">
+  <div class="kicker">Parte 1 · Modelar</div>
+  <h2>Cada característica vira um atributo com tipo</h2>
+  <table class="tbl">
+    <tr><th>Característica</th><th>Nome no código</th><th>Tipo</th><th>Exemplo</th></tr>
+    <tr class="frag"><td>código</td><td class="mono">identificacao</td><td class="mono" style="color:var(--c-type)">String</td><td class="mono" style="color:var(--c-str)">"A-15"</td></tr>
+    <tr class="frag"><td>setor</td><td class="mono">setor</td><td class="mono" style="color:var(--c-type)">String</td><td class="mono" style="color:var(--c-str)">"Coberto"</td></tr>
+    <tr class="frag"><td>andar</td><td class="mono">andar</td><td class="mono" style="color:var(--c-type)">int</td><td class="mono" style="color:var(--c-num)">1</td></tr>
+    <tr class="frag"><td>situação</td><td class="mono">disponivel</td><td class="mono" style="color:var(--c-type)">boolean</td><td class="mono"><span class="g">true</span> <span class="muted">livre</span> · <span class="r">false</span> <span class="muted">ocupada</span></td></tr>
+  </table>
+  <div class="cols frag" style="grid-template-columns:1fr 1fr;margin-top:26px">
+    <div class="callout"><b>String</b> = texto (entre aspas) · <b>int</b> = número inteiro · <b>boolean</b> = só duas respostas.</div>
+    <div class="callout">Nomes <b>sem acento e sem espaço</b>: <code class="i">identificacao</code>, nunca “identificação”.</div>
+  </div>
+  <aside class="notes">
+    <p><b>(3 min)</b> Para cada linha, pergunte: “Isso é texto ou número?”</p>
+    <p>Ênfase no <b>boolean</b>: “Livre ou ocupada só tem duas respostas — por isso boolean é perfeito.”</p>
+    <p>Combine a convenção: <b>disponivel = true → livre</b>. Escreva no canto do quadro e deixe lá a aula toda.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 06 CLASSE x OBJETO -->
+<section data-title="Classe × Objeto">
+  <div class="kicker">Parte 1 · Modelar</div>
+  <h2>Classe é o molde. Objeto é a vaga de verdade.</h2>
+  <div class="cols grow" style="grid-template-columns:330px 60px 1fr;align-items:center">
+    <div class="card dash">
+      <h3 style="color:var(--blue)">Classe · 1 molde</h3>
+      <div class="mono" style="font-size:20px;line-height:1.8">
+        <div><span class="t-kw">class</span> <span class="t-type">Vaga</span></div>
+        <div class="muted">  identificacao</div>
+        <div class="muted">  setor</div>
+        <div class="muted">  andar</div>
+        <div class="muted">  disponivel</div>
+      </div>
+      <p class="small muted" style="margin:10px 0 0">Só a planta. Não guarda nenhum carro.</p>
+    </div>
+    <div style="font-size:44px;color:var(--muted);text-align:center">→</div>
+    <div class="row" style="gap:40px;justify-content:center">
+      <div class="frag" style="display:flex;gap:18px;align-items:center">
+        <div class="spot" data-id="A-15" data-livre="true" data-w="110" data-pill="no"></div>
+        <div class="mono small" style="line-height:1.7">"A-15"<br>"Coberto"<br>1<br><span class="g">true</span></div>
+      </div>
+      <div class="frag" style="display:flex;gap:18px;align-items:center">
+        <div class="spot" data-id="B-07" data-livre="false" data-w="110" data-pill="no"></div>
+        <div class="mono small" style="line-height:1.7">"B-07"<br>"Descoberto"<br>2<br><span class="r">false</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="row frag" style="justify-content:space-between;margin-top:16px">
+    <pre class="code sm" style="flex:1;padding:12px 0"><code>Vaga a15 = new Vaga();     Vaga b07 = new Vaga();</code></pre>
+    <p class="small muted" style="margin:0 0 0 24px;max-width:300px">Na prova, <b class="hl-y">um objeto basta</b>.</p>
+  </div>
+  <aside class="notes">
+    <p><b>(3 min)</b> Analogia: a planta de uma casa não é uma casa. Com uma planta se constroem várias casas.</p>
+    <p>Mostre as duas vagas: mesmo molde, <b>valores diferentes</b>. Uma livre, outra ocupada.</p>
+    <p><b>new</b> é a palavra que “fabrica” o objeto a partir da classe.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 07 MANOBRISTA -->
+<section data-title="Encapsulamento">
+  <div class="kicker">Parte 1 · Modelar</div>
+  <h2>Encapsulamento: o manobrista</h2>
+  <p class="lead">No estacionamento com manobrista, você <b>não</b> entra na garagem para mexer nos carros. Você <span class="hl-y">pede</span> para ele.</p>
+  <table class="tbl" style="margin-top:8px">
+    <tr><th>No estacionamento</th><th>No código</th></tr>
+    <tr class="frag"><td>A garagem é trancada</td><td>atributos <code class="i">private</code></td></tr>
+    <tr class="frag"><td>Você pede ao manobrista</td><td>chama um método: <code class="i">estacionar()</code></td></tr>
+    <tr class="frag"><td>Ele só estaciona se tiver vaga</td><td><code class="i">if (disponivel)</code></td></tr>
+  </table>
+  <div class="callout frag" style="margin-top:22px">
+    <b>Pergunta para a turma:</b> <code class="i">setDisponivel()</code> é público e muda o estado direto. Isso não “fura” a regra?
+    <span class="muted">→ Sim! Ele existe porque a prova pede. Num sistema real, só os métodos mudariam a situação da vaga.</span>
+  </div>
+  <aside class="notes">
+    <p><b>(3 min)</b> A metáfora do manobrista amarra <b>private</b> (garagem trancada) e <b>método com if</b> (o manobrista confere antes).</p>
+    <p>A pergunta do último bloco é ótima para alunos mais atentos. Deixe a turma pensar 20 segundos antes de mostrar a resposta.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 08 ESTADOS -->
+<section data-title="A regra (estados)">
+  <div class="kicker">Parte 2 · A regra</div>
+  <h2>A vaga só tem dois estados</h2>
+  <div class="grow center">
+    <svg class="dg" viewBox="0 0 1100 430" style="width:1080px;height:auto" role="img" aria-label="Diagrama: LIVRE vira OCUPADA com estacionar; OCUPADA vira LIVRE com retirarVeiculo">
+      <defs>
+        <marker id="aG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fg"/></marker>
+        <marker id="aR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fr"/></marker>
+        <marker id="aM" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fm"/></marker>
+      </defs>
+      <!-- estados -->
+      <rect x="230" y="150" width="230" height="110" rx="20" class="box sg" stroke-width="3"/>
+      <text x="345" y="200" text-anchor="middle" font-size="32" font-weight="800" class="fg">LIVRE</text>
+      <text x="345" y="235" text-anchor="middle" font-size="22" class="fm mono">disponivel = true</text>
+      <rect x="640" y="150" width="230" height="110" rx="20" class="box sr" stroke-width="3"/>
+      <text x="755" y="200" text-anchor="middle" font-size="32" font-weight="800" class="fr">OCUPADA</text>
+      <text x="755" y="235" text-anchor="middle" font-size="22" class="fm mono">disponivel = false</text>
+      <!-- transições válidas -->
+      <g class="frag">
+        <path d="M440 150 Q550 60 660 150" fill="none" class="sg" stroke-width="3.5" marker-end="url(#aG)"/>
+        <text x="550" y="78" text-anchor="middle" font-size="24" font-weight="700" class="fg mono">estacionar()</text>
+      </g>
+      <g class="frag">
+        <path d="M660 260 Q550 350 440 260" fill="none" class="sr" stroke-width="3.5" marker-end="url(#aR)"/>
+        <text x="550" y="352" text-anchor="middle" font-size="24" font-weight="700" class="fr mono">retirarVeiculo()</text>
+      </g>
+      <!-- tentativas inválidas (laço) -->
+      <g class="frag">
+        <path d="M250 165 C150 120 150 290 250 245" fill="none" class="sm" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#aM)"/>
+        <text x="150" y="196" text-anchor="end" font-size="19" class="fm mono">retirarVeiculo()</text>
+        <text x="150" y="224" text-anchor="end" font-size="17" class="ft">“A vaga não está</text>
+        <text x="150" y="246" text-anchor="end" font-size="17" class="ft">ocupada”</text>
+      </g>
+      <g class="frag">
+        <path d="M850 165 C950 120 950 290 850 245" fill="none" class="sm" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#aM)"/>
+        <text x="950" y="196" font-size="19" class="fm mono">estacionar()</text>
+        <text x="950" y="224" font-size="17" class="ft">“Vaga já</text>
+        <text x="950" y="246" font-size="17" class="ft">ocupada”</text>
+      </g>
+    </svg>
+  </div>
+  <p class="lead frag" style="text-align:center">Estacionar muda <span class="g">true</span> → <span class="r">false</span>. Retirar muda <span class="r">false</span> → <span class="g">true</span>.</p>
+  <aside class="notes">
+    <p><b>(3 min) Desenhe isto no quadro também.</b> Revele as setas uma a uma.</p>
+    <p>Primeiro as duas ações válidas. Depois pergunte: <b>“E se eu tentar estacionar numa vaga ocupada?”</b> → nada muda, aparece a mensagem.</p>
+    <p>Frase-chave: <b>estacionar true → false; retirar false → true.</b></p>
+  </aside>
+</section>
+
+<!-- ======================================================= 09 MATRIZ 2x2 -->
+<section data-title="Os 4 casos">
+  <div class="kicker">Parte 2 · A regra</div>
+  <h2>2 estados × 2 ações = 4 casos</h2>
+  <div class="matriz">
+    <div></div>
+    <div class="hd">estacionar()</div>
+    <div class="hd">retirarVeiculo()</div>
+
+    <div class="rh"><span class="pill livre">LIVRE · true</span></div>
+    <div class="cell ok frag" data-order="1"><span class="badge">TESTE 1</span>
+      <div class="v g">✓ Ocupa a vaga</div><div class="m">true → false</div>
+      <div class="m" style="color:var(--text);margin-top:8px">“Entrada registrada! …”</div></div>
+    <div class="cell no frag" data-order="4"><span class="badge">TESTE 4</span>
+      <div class="v r">✕ Não muda nada</div><div class="m">continua true</div>
+      <div class="m" style="color:var(--text);margin-top:8px">“A vaga não está ocupada”</div></div>
+
+    <div class="rh"><span class="pill ocupada">OCUPADA · false</span></div>
+    <div class="cell no frag" data-order="2"><span class="badge">TESTE 2</span>
+      <div class="v r">✕ Não muda nada</div><div class="m">continua false</div>
+      <div class="m" style="color:var(--text);margin-top:8px">“Vaga já ocupada”</div></div>
+    <div class="cell ok frag" data-order="3"><span class="badge">TESTE 3</span>
+      <div class="v g">✓ Libera a vaga</div><div class="m">false → true</div>
+      <div class="m" style="color:var(--text);margin-top:8px">“Saída registrada! …”</div></div>
+  </div>
+  <p class="frag" data-order="5" style="text-align:center;margin-top:20px;font-size:24px">Os testes 1 a 4 da prova são <span class="hl-y">exatamente estes 4 casos</span>. O teste 5 só confere o estado final (<span class="g">true</span>).</p>
+  <aside class="notes">
+    <p><b>(3 min) Este é o coração da aula.</b> Pergunte cada célula antes de revelar: “Vaga livre, chamo estacionar. O que acontece?”</p>
+    <p>A ordem de revelação segue a ordem dos testes (1, 2, 3, 4). Mostre que os testes não são “decoreba”: são os 4 casos possíveis.</p>
+    <p><b>Mensagens exatas:</b> “Vaga já ocupada” e “A vaga não está ocupada”. A prova exige esses textos.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 10 DIVISOR -->
+<section data-title="Mão no código">
+  <div class="grow center">
+    <div class="kicker">Parte 3</div>
+    <h1 style="font-size:84px">Mão no código</h1>
+    <p class="lead muted" style="margin-bottom:46px">Eu digito no IntelliJ → vocês digitam junto → o slide confere.</p>
+    <div class="road" style="width:100%">
+      <div><b>1</b>Projeto</div><div><b>2</b>Pacote</div><div><b>3</b>Classe Vaga</div>
+      <div><b>4</b>Atributos</div><div><b>5</b>Getters e setters</div><div><b>6</b>Métodos</div>
+      <div><b>7</b>Classe Main</div><div><b>8</b>Testes</div><div><b>9</b>Rodar</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Mude para o IntelliJ agora.</b> A partir daqui, cada slide é um <b>checkpoint</b>: digite primeiro no IntelliJ e só depois volte ao slide para quem ficou para trás conferir.</p>
+    <p>Aumente a fonte do editor (Ctrl + roda do mouse, ou Settings → Editor → Font: 20+).</p>
+    <p><b>Erro planejado:</b> no passo 6, “esqueça” o <code>!</code> no retirarVeiculo ou o setDisponivel(true) no Main e deixe a turma achar ao rodar.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 11 PASSO 1-2 -->
+<section data-title="Passo 1–2: projeto e pacote" data-passo="2">
+  <div class="kicker">Checkpoint · Passos 1 e 2</div>
+  <h2>Projeto e pacote</h2>
+  <div class="cols" style="grid-template-columns:1.25fr 1fr">
+    <div>
+      <p class="small muted" style="margin-bottom:8px"><span class="kbd">File</span> → <span class="kbd">New</span> → <span class="kbd">Project…</span></p>
+      <div class="ide">
+        <div class="bar">New Project</div>
+        <div class="body">
+          <label>Name</label><div class="f hot">ControleEstacionamento</div>
+          <label>Location</label><div class="f">C:\Users\...\Desktop</div>
+          <label>Language</label><div class="f">Java</div>
+          <label>Build system</label><div class="f">IntelliJ</div>
+          <label>JDK</label><div class="f">21</div>
+        </div>
+      </div>
+      <p class="small muted" style="margin:16px 0 0"><span class="kbd">src</span> → botão direito → <span class="kbd">New</span> → <span class="kbd">Package</span> → <span class="mono hl-y">atividade</span></p>
+    </div>
+    <div>
+      <p class="small muted" style="margin-bottom:8px">Deve ficar assim:</p>
+      <div class="tree">
+        <div><span class="d">▾ ControleEstacionamento</span></div>
+        <div>  <span class="d">▾ src</span></div>
+        <div>    <span class="p">▾ atividade</span></div>
+        <div class="muted">       (Vaga e Main vêm já já)</div>
+      </div>
+      <div class="callout" style="margin-top:18px">Nomes <b>exatamente</b> como a prova pede. <span class="mono">atividade</span> tudo minúsculo.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>(3 min)</b> “O projeto é a pasta do trabalho. O pacote é uma caixa organizadora dentro dele.”</p>
+    <p>Espere todo mundo ter o pacote <b>atividade</b> antes de seguir. Peça um “joinha” de quem terminou.</p>
+    <p>Se aparecer <code>&lt;No SDK&gt;</code>: Project Structure → SDK → JDK 21.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 12 PASSO 3-4 -->
+<section data-title="Passo 3–4: classe Vaga e atributos" data-passo="4">
+  <div class="kicker">Checkpoint · Passos 3 e 4</div>
+  <h2>Classe <span class="mono">Vaga</span> e seus atributos</h2>
+  <div class="cols" style="grid-template-columns:1fr 430px">
+    <pre class="code" data-steps="1|3,10|5-8"><code>package atividade;
+
+public class Vaga {
+
+    private String identificacao;
+    private String setor;
+    private int andar;
+    private boolean disponivel;
+
+}</code></pre>
+    <div class="callouts">
+      <div class="callout frag" data-order="1"><b>package</b> diz em qual caixa a classe mora. Sempre a 1ª linha.</div>
+      <div class="callout frag" data-order="2"><b>public class Vaga</b> — o nome da classe é igual ao do arquivo: <span class="mono">Vaga.java</span>.</div>
+      <div class="callout frag" data-order="3"><b>private</b> + tipo + nome + <b>;</b> — os 4 atributos que modelamos.</div>
+    </div>
+  </div>
+  <p class="small muted" style="margin-top:18px">Para criar: botão direito em <span class="mono">atividade</span> → <span class="kbd">New</span> → <span class="kbd">Java Class</span> → <span class="mono">Vaga</span></p>
+  <aside class="notes">
+    <p><b>Digite primeiro no IntelliJ</b>, depois mostre este slide.</p>
+    <p>Repare na indentação: 4 espaços dentro da classe. O IntelliJ faz sozinho com Enter.</p>
+    <p>Pergunta rápida: “Por que private?” → garagem trancada (manobrista).</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 13 PASSO 5 -->
+<section data-title="Passo 5: getters e setters" data-passo="5">
+  <div class="kicker">Checkpoint · Passo 5</div>
+  <h2>Getters e setters: deixe o IntelliJ escrever</h2>
+  <div class="cols" style="grid-template-columns:440px 1fr">
+    <div>
+      <div class="card" style="padding:16px 20px;margin-bottom:14px">
+        <div class="row small" style="gap:8px;flex-wrap:wrap">
+          <span class="kbd">Alt</span>+<span class="kbd">Insert</span> → <b>Getter and Setter</b> → <span class="kbd">Ctrl</span>+<span class="kbd">A</span> → <b>OK</b>
+        </div>
+      </div>
+      <div class="callouts">
+        <div class="callout frag" data-order="1"><b>Getter</b> = consultar. Devolve o valor com <span class="mono">return</span>.</div>
+        <div class="callout frag" data-order="2"><b>Setter</b> = guardar. Recebe o valor entre os parênteses.</div>
+        <div class="callout frag" data-order="3"><b>this.</b>identificacao é o atributo <i>deste objeto</i>; o outro é o valor que chegou.</div>
+        <div class="callout frag" data-order="4">Para <b>boolean</b> o getter usa <b>is</b>: <span class="mono">isDisponivel()</span>. É normal.</div>
+      </div>
+    </div>
+    <pre class="code" data-steps="1-3|5-7|6|9-11"><code>public String getIdentificacao() {
+    return identificacao;
+}
+
+public void setIdentificacao(String identificacao) {
+    this.identificacao = identificacao;
+}
+
+public boolean isDisponivel() {
+    return disponivel;
+}</code></pre>
+  </div>
+  <p class="small muted" style="margin-top:16px">O IntelliJ gera <b>8 métodos</b> (4 getters + 4 setters). Aqui mostramos só 3 como exemplo.</p>
+  <aside class="notes">
+    <p><b>(3 min)</b> Faça o Alt+Insert devagar, mostrando a lista e o Ctrl+A.</p>
+    <p>Depois de gerar, abra um getter e um setter e explique com este slide.</p>
+    <p>O <b>this</b> costuma confundir: “tem duas coisas com o mesmo nome; o this aponta para a que é do objeto”.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 14 ANATOMIA -->
+<section data-title="Anatomia de um método" data-passo="6">
+  <div class="kicker">Antes do passo 6</div>
+  <h2>Anatomia de um método</h2>
+  <div class="anat" style="margin:20px 0 34px">
+    <div class="tok"><span class="t-kw">public</span><span class="lab frag"><b>quem pode chamar</b>qualquer classe (o Main)</span></div>
+    <div class="tok"><span class="t-kw">void</span><span class="lab frag"><b>o que devolve</b>nada (só faz algo)</span></div>
+    <div class="tok"><span class="t-fn">estacionar</span><span class="lab frag"><b>nome</b>um verbo: uma ação</span></div>
+    <div class="tok"><span>()</span><span class="lab frag"><b>o que recebe</b>nada (vazio)</span></div>
+    <div class="tok"><span>{ … }</span><span class="lab frag"><b>corpo</b>o que ele faz</span></div>
+  </div>
+  <table class="tbl frag" style="font-size:21px">
+    <tr><th>Método</th><th>Recebe</th><th>Devolve</th></tr>
+    <tr><td class="mono">setAndar(int andar)</td><td>um <span class="mono">int</span></td><td class="muted">nada (void)</td></tr>
+    <tr><td class="mono">getAndar()</td><td class="muted">nada</td><td>um <span class="mono">int</span></td></tr>
+    <tr><td class="mono hl-y">estacionar()</td><td class="muted">nada</td><td class="muted">nada (void)</td></tr>
+  </table>
+  <aside class="notes">
+    <p><b>(2 min)</b> Rápido. O objetivo é tirar o medo do <b>void</b> e dos parênteses vazios.</p>
+    <p>A prova diz: “não recebe parâmetros e não retorna valor” → <b>void</b> + <b>()</b>.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 15 ESTACIONAR -->
+<section data-title="Passo 6: estacionar()" data-passo="6">
+  <div class="kicker">Checkpoint · Passo 6</div>
+  <h2><span class="mono">estacionar()</span> — registrar a entrada</h2>
+  <pre class="code sm" data-steps="1|2|3-4|5-7"><code>public void estacionar() {
+    if (disponivel) {
+        disponivel = false;
+        System.out.println("Entrada registrada! Veículo estacionado na vaga " + identificacao + ".");
+    } else {
+        System.out.println("Vaga já ocupada");
+    }
+}</code></pre>
+  <div class="cols" style="grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px">
+    <div class="callout frag" data-order="1"><b>void</b> e <b>()</b>: não recebe, não devolve.</div>
+    <div class="callout frag" data-order="2"><b>if (disponivel)</b> pergunta: <i>está livre?</i></div>
+    <div class="callout g frag" data-order="3"><b>Sim</b> → ocupa (<span class="g">true</span> → <span class="r">false</span>) e confirma.</div>
+    <div class="callout r frag" data-order="4"><b>Não</b> → avisa. Texto <b>exato</b>: <i>Vaga já ocupada</i></div>
+  </div>
+  <aside class="notes">
+    <p><b>Digite no IntelliJ abaixo dos getters/setters.</b> Fale enquanto digita: “se está livre… ocupa… e avisa”.</p>
+    <p>Ligue cada parte com a matriz 2×2: o if é a célula do teste 1, o else é a do teste 2.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 16 RETIRAR -->
+<section data-title="Passo 6: retirarVeiculo()" data-passo="6">
+  <div class="kicker">Checkpoint · Passo 6</div>
+  <h2><span class="mono">retirarVeiculo()</span> — registrar a saída</h2>
+  <pre class="code sm" data-steps="2|2|3-4|5-7"><code>public void retirarVeiculo() {
+    if (!disponivel) {
+        disponivel = true;
+        System.out.println("Saída registrada! Vaga " + identificacao + " liberada.");
+    } else {
+        System.out.println("A vaga não está ocupada");
+    }
+}</code></pre>
+  <div class="cols" style="grid-template-columns:1.1fr 1fr 1fr 1fr;gap:14px;margin-top:20px">
+    <div class="callout frag" data-order="1"><b>!</b> significa <b>NÃO</b>. Lê-se: “se <b>não</b> está disponível…”</div>
+    <div class="card frag" data-order="2" style="padding:10px 16px;font:18px/1.6 var(--mono)">
+      <div><span class="t-true">true</span>  → !  → <span class="t-false">false</span></div>
+      <div><span class="t-false">false</span> → !  → <span class="t-true">true</span></div>
+      <div class="muted" style="font:16px var(--sans)">o ! inverte</div>
+    </div>
+    <div class="callout g frag" data-order="3"><b>Ocupada</b> → libera (<span class="r">false</span> → <span class="g">true</span>) e confirma.</div>
+    <div class="callout r frag" data-order="4"><b>Livre</b> → avisa: <i>A vaga não está ocupada</i></div>
+  </div>
+  <aside class="notes">
+    <p>O <b>!</b> é o ponto mais difícil. Leia em voz alta: “if NÃO disponível”.</p>
+    <p><b>Opção de erro planejado:</b> digite sem o <code>!</code>, siga em frente e só descubra ao rodar no passo 9.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 17 MAIN -->
+<section data-title="Passo 7: Main" data-passo="7">
+  <div class="kicker">Checkpoint · Passo 7</div>
+  <h2>Classe <span class="mono">Main</span>: criar e preencher a vaga</h2>
+  <div class="cols" style="grid-template-columns:1fr 380px">
+    <pre class="code xs" data-steps="4|6|8-10|11|13-17"><code>package atividade;
+
+public class Main {
+    public static void main(String[] args) {
+
+        Vaga vaga = new Vaga();
+
+        vaga.setIdentificacao("A-15");
+        vaga.setSetor("Coberto");
+        vaga.setAndar(1);
+        vaga.setDisponivel(true);
+
+        System.out.println("=== Dados da vaga ===");
+        System.out.println("Identificação: " + vaga.getIdentificacao());
+        System.out.println("Setor: " + vaga.getSetor());
+        System.out.println("Andar: " + vaga.getAndar());
+        System.out.println("Disponível: " + vaga.isDisponivel());</code></pre>
+    <div class="callouts">
+      <div class="callout frag" data-order="1"><b>main</b> é a porta de entrada. Por enquanto, decore essa linha.</div>
+      <div class="callout frag" data-order="2"><b>new Vaga()</b> fabrica o objeto. <span class="mono">vaga</span> é o nome dele.</div>
+      <div class="callout frag" data-order="3"><b>Setters</b> guardam os dados. Valores à sua escolha.</div>
+      <div class="callout g frag" data-order="4">Começa <b>livre</b>: <span class="mono g">true</span>. Sem isso, o teste 1 falha!</div>
+      <div class="callout frag" data-order="5"><b>Getters</b> consultam. O <b>+</b> cola texto com valor.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Atalho: digite <b>psvm</b> + Tab para gerar o main, e <b>sout</b> + Tab para o System.out.println.</p>
+    <p>Destaque o <b>setDisponivel(true)</b>: é o erro mais comum da prova.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 18 TESTES -->
+<section data-title="Passo 8: os 5 testes" data-passo="8">
+  <div class="kicker">Checkpoint · Passo 8</div>
+  <h2>Os 5 testes, na ordem</h2>
+  <div class="cols" style="grid-template-columns:1fr 330px">
+    <pre class="code xs" data-start="18" data-steps="1-2|4-5|7-8|10-11|13-14"><code>        System.out.println("\n--- Teste 1: estacionar (1ª vez) ---");
+        vaga.estacionar();
+
+        System.out.println("\n--- Teste 2: estacionar de novo ---");
+        vaga.estacionar();
+
+        System.out.println("\n--- Teste 3: retirar veículo (1ª vez) ---");
+        vaga.retirarVeiculo();
+
+        System.out.println("\n--- Teste 4: retirar de novo ---");
+        vaga.retirarVeiculo();
+
+        System.out.println("\n--- Teste 5: disponibilidade final ---");
+        System.out.println("Vaga disponível? " + vaga.isDisponivel());
+    }
+}</code></pre>
+    <div class="callouts">
+      <div class="callout g frag" data-order="1"><b>1</b> · livre + estacionar → ocupa</div>
+      <div class="callout r frag" data-order="2"><b>2</b> · ocupada + estacionar → <i>Vaga já ocupada</i></div>
+      <div class="callout g frag" data-order="3"><b>3</b> · ocupada + retirar → libera</div>
+      <div class="callout r frag" data-order="4"><b>4</b> · livre + retirar → <i>A vaga não está ocupada</i></div>
+      <div class="callout frag" data-order="5"><b>5</b> · consulta final → <span class="g mono">true</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Os <b>\n</b> no início das linhas pulam uma linha no console, para separar os testes.</p>
+    <p>Mostre de novo que cada teste é uma célula da matriz 2×2.</p>
+    <p><b>Não rode ainda!</b> O próximo slide é a previsão.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 19 PREVER -->
+<section data-title="Prever e rodar" data-passo="9">
+  <div class="kicker">Passo 9 · Prever antes de rodar</div>
+  <h2>O que vai aparecer no console?</h2>
+  <div class="cols grow" style="grid-template-columns:400px 1fr;align-items:stretch">
+    <div class="card">
+      <h3>Estado inicial: <span class="g">true</span></h3>
+      <ul class="list mono" style="font-size:20px">
+        <li><span class="k">1</span>estacionar()</li>
+        <li><span class="k">2</span>estacionar()</li>
+        <li><span class="k">3</span>retirarVeiculo()</li>
+        <li><span class="k">4</span>retirarVeiculo()</li>
+        <li><span class="k">5</span>isDisponivel()</li>
+      </ul>
+      <p class="small muted" style="margin:14px 0 0">Depois: <span class="kbd">Shift</span>+<span class="kbd">F10</span> ou o ▶ verde.</p>
+    </div>
+    <div class="console" style="position:relative">
+      <div class="console-bar">Run: Main</div>
+      <div class="console-body" style="font-size:16px;line-height:1.38"><div class="frag" data-order="1">=== Dados da vaga ===
+Identificação: A-15
+Setor: Coberto
+Andar: 1
+Disponível: true</div><div class="frag" data-order="2">
+<span class="h">--- Teste 1: estacionar (1ª vez) ---</span>
+Entrada registrada! Veículo estacionado na vaga A-15.</div><div class="frag" data-order="3">
+<span class="h">--- Teste 2: estacionar de novo ---</span>
+<span class="k">Vaga já ocupada</span></div><div class="frag" data-order="4">
+<span class="h">--- Teste 3: retirar veículo (1ª vez) ---</span>
+Saída registrada! Vaga A-15 liberada.</div><div class="frag" data-order="5">
+<span class="h">--- Teste 4: retirar de novo ---</span>
+<span class="k">A vaga não está ocupada</span></div><div class="frag" data-order="6">
+<span class="h">--- Teste 5: disponibilidade final ---</span>
+Vaga disponível? true</div></div>
+      <div class="frag out center" data-order="1" style="position:absolute;inset:38px 0 0 0;background:#0b0e12;color:#d6dde6;padding:30px">
+        <div style="font-size:54px">✏️</div>
+        <p style="font-size:26px;font-weight:700;margin:10px 0">Escreva no caderno o que vai aparecer.</p>
+        <p style="color:#8b96a5;font-size:20px">1 minuto. Depois a gente roda e confere linha por linha.</p>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>(4 min) Não pule esta etapa.</b> Dê 1 minuto para cada aluno escrever a previsão.</p>
+    <p>Depois rode no IntelliJ (Shift+F10) e revele aqui teste a teste, perguntando: “Quem acertou o teste 2?”</p>
+    <p>Se você fez o <b>erro planejado</b>, é agora que ele aparece: a saída real vai diferir. Peça para a turma achar a linha culpada.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 20 SIMULADOR -->
+<section data-title="Por dentro da execução" id="sSim">
+  <div class="kicker">Parte 4 · Investigar</div>
+  <h2>Por dentro da execução</h2>
+  <div class="sim">
+    <pre class="code xs" id="simCode"><code>public void estacionar() {
+    if (disponivel) {
+        disponivel = false;
+        System.out.println("Entrada registrada! ...");
+    } else {
+        System.out.println("Vaga já ocupada");
+    }
+}
+
+public void retirarVeiculo() {
+    if (!disponivel) {
+        disponivel = true;
+        System.out.println("Saída registrada! ...");
+    } else {
+        System.out.println("A vaga não está ocupada");
+    }
+}</code></pre>
+    <div class="sim-side">
+      <div class="sim-top">
+        <div class="spot" id="simSpot" data-id="A-15" data-livre="true" data-w="116"></div>
+        <div class="card mem" id="simMem">
+          <div class="t">Objeto na memória · vaga</div>
+          <div class="f"><span>identificacao</span><span style="color:var(--c-str)">"A-15"</span></div>
+          <div class="f"><span>setor</span><span style="color:var(--c-str)">"Coberto"</span></div>
+          <div class="f"><span>andar</span><span style="color:var(--c-num)">1</span></div>
+          <div class="f" id="memDisp"><span>disponivel</span><b id="memVal" class="g">true</b></div>
+        </div>
+      </div>
+      <div class="btns">
+        <button class="btn g" data-act="estacionar">vaga.estacionar()</button>
+        <button class="btn r" data-act="retirar">vaga.retirarVeiculo()</button>
+      </div>
+      <div class="btns">
+        <button class="btn o" data-act="testes">▶ Rodar os 5 testes</button>
+        <button class="btn o" data-act="reset">↺ Reiniciar</button>
+      </div>
+      <div class="console" id="simConsoleBox" style="flex:1;min-height:0">
+        <div class="console-bar">Run: Main</div>
+        <div class="console-body" id="simConsole"></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>(4 min)</b> Use para quem ainda não “viu” o if funcionando.</p>
+    <p>Clique em <b>estacionar()</b> duas vezes: na 2ª, a linha do if acende em vermelho e a execução pula para o else.</p>
+    <p>Depois clique em <b>Rodar os 5 testes</b> e narre cada passo. O simulador reinicia sempre que você entra neste slide.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 21 CAÇA AO ERRO 1 -->
+<section data-title="Caça ao erro 1">
+  <div class="kicker">Caça ao erro · 1</div>
+  <h2>Compila. Mas tem um erro de lógica. Qual?</h2>
+  <pre class="code sm" data-steps="2"><code>public void retirarVeiculo() {
+    if (disponivel) {
+        disponivel = true;
+        System.out.println("Saída registrada! Vaga " + identificacao + " liberada.");
+    } else {
+        System.out.println("A vaga não está ocupada");
+    }
+}</code></pre>
+  <div class="cols frag" data-order="1" style="grid-template-columns:1fr 1fr;margin-top:22px">
+    <div class="callout r"><b>Faltou o !</b> na linha 2. Agora o if pergunta “está livre?”, ao contrário do que deveria.</div>
+    <div class="callout">Resultado: o <b>teste 3</b> diz <i>A vaga não está ocupada</i> e o <b>teste 5</b> mostra <span class="r mono">false</span>. O carro nunca sai!</div>
+  </div>
+  <aside class="notes">
+    <p><b>(2 min)</b> Dê 40 segundos. Dica se travarem: “Sigam os testes com o estado: depois do teste 2 a vaga está false…”</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 22 CAÇA AO ERRO 2 -->
+<section data-title="Caça ao erro 2">
+  <div class="kicker">Caça ao erro · 2 e 3</div>
+  <h2>Mais dois erros que custam ponto</h2>
+  <div class="cols" style="grid-template-columns:1fr 1fr">
+    <div>
+      <p class="small" style="margin-bottom:10px"><b>O que o teste 1 imprime?</b></p>
+      <pre class="code sm"><code>Vaga vaga = new Vaga();
+vaga.setIdentificacao("A-15");
+vaga.setSetor("Coberto");
+vaga.setAndar(1);
+
+vaga.estacionar();</code></pre>
+      <div class="callout r frag" style="margin-top:14px"><i>Vaga já ocupada</i>! Faltou <span class="mono">setDisponivel(true)</span>. Um boolean começa <span class="r mono">false</span> por padrão.</div>
+    </div>
+    <div>
+      <p class="small" style="margin-bottom:10px"><b>Funciona. Por que perde ponto?</b></p>
+      <pre class="code sm"><code>} else {
+    System.out.println("Vaga ja ocupada.");
+}</code></pre>
+      <div class="callout r frag" style="margin-top:14px">Texto diferente: sem acento e com ponto final. A prova exige <b>exatamente</b> <i>Vaga já ocupada</i>.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>O primeiro é o erro nº 1 das provas. O valor padrão de boolean (false) é a explicação.</p>
+    <p>O segundo: o programa “funciona”, mas não atende ao enunciado. Copie as mensagens do enunciado.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 23 ERROS COMPILAÇÃO -->
+<section data-title="Se não compilar">
+  <div class="kicker">Socorro rápido</div>
+  <h2>Se não compilar, olhe aqui</h2>
+  <table class="tbl" style="font-size:20px">
+    <tr><th>Mensagem</th><th>Correção</th></tr>
+    <tr><td class="mono">package atividade does not exist</td><td><span class="mono">package atividade;</span> na 1ª linha dos dois arquivos</td></tr>
+    <tr><td class="mono">class Vaga is public, should be declared in a file named Vaga.java</td><td>Nome do arquivo = nome da classe</td></tr>
+    <tr><td class="mono">cannot find symbol … isDisponivel()</td><td>Mesmo nome no getter e na chamada (<span class="mono">is</span> × <span class="mono">get</span>)</td></tr>
+    <tr><td class="mono">cannot find symbol … vaga</td><td>Faltou <span class="mono">Vaga vaga = new Vaga();</span> ou maiúscula/minúscula</td></tr>
+    <tr><td class="mono">';' expected</td><td>Faltou ponto e vírgula no fim da linha anterior</td></tr>
+    <tr><td class="mono">&lt;No SDK&gt;</td><td>File → Project Structure → SDK → JDK 21</td></tr>
+  </table>
+  <aside class="notes">
+    <p>Slide de consulta. Volte a ele sempre que alguém travar durante a aula.</p>
+    <p>Dica: o IntelliJ sublinha em vermelho. Passe o mouse em cima para ler a mensagem.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 24 CHECKLIST -->
+<section data-title="Checklist da prova">
+  <div class="kicker">Antes de entregar</div>
+  <h2>Checklist da prova</h2>
+  <div class="check">
+    <label><input type="checkbox"><span>Projeto <span class="mono">ControleEstacionamento</span></span></label>
+    <label><input type="checkbox"><span>Pacote <span class="mono">atividade</span></span></label>
+    <label><input type="checkbox"><span>Só as classes <span class="mono">Vaga</span> e <span class="mono">Main</span></span></label>
+    <label><input type="checkbox"><span>4 atributos <b>private</b> com tipos certos</span></label>
+    <label><input type="checkbox"><span>Getter e setter para todos</span></label>
+    <label><input type="checkbox"><span><span class="mono">estacionar()</span> void, sem parâmetro, if/else</span></label>
+    <label><input type="checkbox"><span><span class="mono">retirarVeiculo()</span> void, sem parâmetro, if/else</span></label>
+    <label><input type="checkbox"><span>Vaga começa <span class="g mono">true</span></span></label>
+    <label><input type="checkbox"><span>Dados exibidos com os getters</span></label>
+    <label><input type="checkbox"><span>5 testes na ordem</span></label>
+    <label><input type="checkbox"><span>Mensagens exatas</span></label>
+    <label><input type="checkbox"><span>Indentado · sem menu · sem Scanner</span></label>
+  </div>
+  <aside class="notes">
+    <p>Peça para cada aluno conferir o próprio código item a item. Clique nos itens para marcar.</p>
+  </aside>
+</section>
+
+<!-- ======================================================= 25 PERGUNTA 1 -->
+<section data-title="Pergunta 1">
+  <div class="kicker">Pergunta rápida · 1 de 4 · responda com a mão</div>
+  <h2>A vaga está <span class="r">ocupada</span>. Chamo <span class="mono">estacionar()</span>. O que aparece?</h2>
+  <div class="opts" style="margin-top:10px">
+    <div class="opt"><span class="l">A</span>Entrada registrada!</div>
+    <div class="opt frag mark" data-order="1"><span class="l">B</span>Vaga já ocupada</div>
+    <div class="opt"><span class="l">C</span>A vaga não está ocupada</div>
+    <div class="opt"><span class="l">D</span>Nada</div>
+  </div>
+  <p class="lead frag" data-order="1" style="margin-top:26px;text-align:center"><span class="mono">if (disponivel)</span> é <span class="r mono">false</span> → vai para o <b>else</b>.</p>
+  <aside class="notes"><p>Peça: “Levantem 1 dedo para A, 2 para B…”. Revele depois.</p></aside>
+</section>
+
+<!-- ======================================================= 26 PERGUNTA 2 -->
+<section data-title="Pergunta 2">
+  <div class="kicker">Pergunta rápida · 2 de 4</div>
+  <h2>O que <span class="mono">if (!disponivel)</span> pergunta?</h2>
+  <div class="opts" style="margin-top:10px">
+    <div class="opt"><span class="l">A</span>A vaga está livre?</div>
+    <div class="opt frag mark" data-order="1"><span class="l">B</span>A vaga está ocupada?</div>
+    <div class="opt"><span class="l">C</span>A vaga existe?</div>
+    <div class="opt"><span class="l">D</span>O andar é zero?</div>
+  </div>
+  <p class="lead frag" data-order="1" style="margin-top:26px;text-align:center"><b class="hl-y">!</b> = NÃO. “Não disponível” = ocupada.</p>
+  <aside class="notes"><p>Se muitos errarem, volte ao slide do retirarVeiculo e leia o if em voz alta.</p></aside>
+</section>
+
+<!-- ======================================================= 27 PERGUNTA 3 -->
+<section data-title="Pergunta 3">
+  <div class="kicker">Pergunta rápida · 3 de 4</div>
+  <h2>Qual linha faz a vaga começar livre?</h2>
+  <div class="opts mono" style="margin-top:10px">
+    <div class="opt"><span class="l">A</span>Vaga vaga = new Vaga();</div>
+    <div class="opt frag mark" data-order="1"><span class="l">B</span>vaga.setDisponivel(true);</div>
+    <div class="opt"><span class="l">C</span>vaga.isDisponivel();</div>
+    <div class="opt"><span class="l">D</span>vaga.setAndar(1);</div>
+  </div>
+  <p class="lead frag" data-order="1" style="margin-top:26px;text-align:center">Sem ela, o boolean fica <span class="r mono">false</span> e o teste 1 falha.</p>
+  <aside class="notes"><p>Reforço do erro nº 1 da prova.</p></aside>
+</section>
+
+<!-- ======================================================= 28 PERGUNTA 4 -->
+<section data-title="Pergunta 4">
+  <div class="kicker">Pergunta rápida · 4 de 4</div>
+  <h2>Por que os atributos são <span class="mono">private</span>?</h2>
+  <div class="opts" style="margin-top:10px">
+    <div class="opt"><span class="l">A</span>Para o programa rodar mais rápido</div>
+    <div class="opt frag mark" data-order="1"><span class="l">B</span>Para ninguém mudar a vaga direto, só pelos métodos</div>
+    <div class="opt"><span class="l">C</span>Porque o IntelliJ obriga</div>
+    <div class="opt"><span class="l">D</span>Para poder usar Scanner</div>
+  </div>
+  <p class="lead frag" data-order="1" style="margin-top:26px;text-align:center">Garagem trancada. Quem mexe é o <b class="hl-y">manobrista</b> (os métodos).</p>
+  <aside class="notes"><p>Retome a metáfora do manobrista para fechar o conceito de encapsulamento.</p></aside>
+</section>
+
+<!-- ======================================================= 29 FECHAMENTO -->
+<section data-title="Fechamento">
+  <div class="grow center">
+    <div class="kicker">Pronto para a prova</div>
+    <div class="row" style="gap:22px;margin:30px 0 40px">
+      <div class="card top-b" style="width:220px"><div style="font:800 64px var(--sans)">2</div>classes</div>
+      <div class="card top-b" style="width:220px"><div style="font:800 64px var(--sans)">4</div>atributos</div>
+      <div class="card top-y" style="width:220px"><div style="font:800 64px var(--sans)">2</div>métodos</div>
+      <div class="card top-g" style="width:220px"><div style="font:800 64px var(--sans)">5</div>testes</div>
+    </div>
+    <p class="lead">Na prova, os valores são <b>à sua escolha</b>.<br>A <span class="hl-y">ordem dos testes</span> e as <span class="hl-y">mensagens</span> são obrigatórias.</p>
+    <p class="muted" style="margin-top:20px">Sem menu · sem Scanner · sem métodos extras · código indentado</p>
+  </div>
+  <aside class="notes">
+    <p><b>Fechamento (1 min).</b> “Na prova vocês fazem exatamente isso sozinhos. Duas classes, quatro atributos, dois métodos, cinco testes.”</p>
+  </aside>
+</section>
+
+</main>
+
+<script>
+(()=>{
+'use strict';
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const stage=$('#stage'), slides=$$('#stage > section');
+
+/* ---------- Ilustração da vaga ---------- */
+const CARRO=`<g class="carro">
+  <rect x="36" y="76" width="12" height="34" rx="4" class="roda"/><rect x="152" y="76" width="12" height="34" rx="4" class="roda"/>
+  <rect x="36" y="192" width="12" height="34" rx="4" class="roda"/><rect x="152" y="192" width="12" height="34" rx="4" class="roda"/>
+  <ellipse cx="40" cy="128" rx="8" ry="5" class="lataria"/><ellipse cx="160" cy="128" rx="8" ry="5" class="lataria"/>
+  <rect x="44" y="46" width="112" height="208" rx="30" class="lataria"/>
+  <path d="M58 120 Q100 106 142 120 L134 148 Q100 140 66 148 Z" class="vidro"/>
+  <rect x="67" y="152" width="66" height="50" rx="10" class="teto"/>
+  <path d="M66 206 Q100 212 134 206 L140 228 Q100 236 60 228 Z" class="vidro"/>
+  <rect x="56" y="52" width="22" height="8" rx="3" class="farol"/><rect x="122" y="52" width="22" height="8" rx="3" class="farol"/>
+</g>`;
+function montarVaga(el){
+  const id=el.dataset.id||'A-15', w=+(el.dataset.w||160);
+  el.innerHTML=`<svg viewBox="0 0 200 300" width="${w}" role="img" aria-label="Vaga ${id}">
+    <rect width="200" height="300" rx="14" class="asfalto"/>
+    <path d="M14 296 V14 H186 V296" class="faixa"/>
+    <text x="100" y="278" class="pintura">${id}</text>${CARRO}</svg><span class="pill"></span>`;
+  pintarVaga(el, el.dataset.livre==='true');
+  if(el.dataset.pill==='no') el.querySelector('.pill').style.display='none';
+}
+function pintarVaga(el,livre){
+  el.dataset.livre=String(livre);
+  const p=el.querySelector('.pill');
+  p.className='pill '+(livre?'livre':'ocupada');
+  p.textContent=livre?'LIVRE · true':'OCUPADA · false';
+}
+$$('.spot').forEach(montarVaga);
+
+/* ---------- Destaque de sintaxe Java ---------- */
+const KW=new Set('package public private protected class static void if else return new this import final while for'.split(' '));
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function hl(src){
+  let out='',m; const re=/(\/\/.*)|("(?:\\.|[^"\\])*")|([A-Za-z_]\w*)|(\d+)|(!)(?!=)|([\s\S])/g;
+  while((m=re.exec(src))){
+    if(m[1]) out+=`<span class="t-com">${esc(m[1])}</span>`;
+    else if(m[2]) out+=`<span class="t-str">${esc(m[2])}</span>`;
+    else if(m[3]){
+      const w=m[3], call=/^\s*\(/.test(src.slice(re.lastIndex));
+      const c= w==='true'?'t-true': w==='false'?'t-false': KW.has(w)?'t-kw':
+               (/^[A-Z]/.test(w)||w==='int'||w==='boolean')?'t-type': call?'t-fn':'';
+      out+=c?`<span class="${c}">${w}</span>`:w;
+    }
+    else if(m[4]) out+=`<span class="t-num">${m[4]}</span>`;
+    else if(m[5]) out+=`<span class="t-bang">!</span>`;
+    else out+=esc(m[6]);
+  }
+  return out;
+}
+$$('pre.code').forEach(pre=>{
+  const src=pre.textContent.replace(/^\n/,'').replace(/\s+$/,'');
+  const start=+(pre.dataset.start||1);
+  pre.innerHTML='<code>'+src.split('\n').map((l,i)=>
+    `<span class="ln" data-n="${i+1}" data-label="${start+i}">${l?hl(l):' '}</span>`).join('')+'</code>';
+});
+
+/* ---------- Passos (fragmentos + destaque de linhas) ---------- */
+function linhas(spec){
+  const s=new Set();
+  spec.split(',').forEach(p=>{const [a,b]=p.split('-').map(Number); for(let i=a;i<=(b||a);i++) s.add(i);});
+  return s;
+}
+slides.forEach(sec=>{
+  const itens=[]; let auto=0;
+  $$('.frag, pre.code[data-steps]',sec).forEach(el=>{
+    if(el.matches('pre')) el.dataset.steps.split('|').forEach(sp=>itens.push({k:++auto,pre:el,set:linhas(sp)}));
+    else itens.push({k:el.dataset.order?+el.dataset.order:++auto,el});
+  });
+  const chaves=[...new Set(itens.map(i=>i.k))].sort((a,b)=>a-b);
+  sec._grupos=chaves.map(k=>itens.filter(i=>i.k===k));
+});
+
+/* ---------- Indicador de passo (slides de código) ---------- */
+slides.forEach(sec=>{
+  if(!sec.dataset.passo) return;
+  const n=+sec.dataset.passo, d=document.createElement('div');
+  d.className='passo';
+  d.innerHTML=`PASSO ${n}/9 <span class="seg">${Array.from({length:9},(_,i)=>`<i class="${i<n?'on':''}"></i>`).join('')}</span>`;
+  sec.appendChild(d);
+});
+
+/* ---------- Navegação ---------- */
+let cur=0, step=0;
+function aplicar(){
+  const sec=slides[cur], g=sec._grupos;
+  $$('.frag',sec).forEach(e=>e.classList.remove('shown'));
+  const preSet=new Map();
+  for(let i=0;i<step;i++) g[i].forEach(it=>it.el?it.el.classList.add('shown'):preSet.set(it.pre,it.set));
+  $$('pre.code[data-steps]',sec).forEach(pre=>{
+    const S=preSet.get(pre); pre.classList.toggle('focus',!!S);
+    $$('.ln',pre).forEach(l=>l.classList.toggle('hl',!!S&&S.has(+l.dataset.n)));
+  });
+}
+function ir(n,s=0){
+  n=Math.max(0,Math.min(slides.length-1,n));
+  const mudou=n!==cur||!slides[n].classList.contains('active');
+  slides[cur].classList.remove('active');
+  cur=n; slides[cur].classList.add('active');
+  step= s===Infinity ? slides[cur]._grupos.length : s;
+  aplicar();
+  history.replaceState(null,'','#/'+(cur+1));
+  $('#count').textContent=`${cur+1} / ${slides.length}`;
+  $('#progress').style.width=((cur+1)/slides.length*100)+'%';
+  if(mudou && slides[cur].id==='sSim') simReset();
+  atualizarNotas();
+}
+function proximo(){ if(step<slides[cur]._grupos.length){step++;aplicar();atualizarNotas();} else if(cur<slides.length-1) ir(cur+1,0); }
+function anterior(){ if(step>0){step--;aplicar();atualizarNotas();} else if(cur>0) ir(cur-1,Infinity); }
+
+function teclas(e){
+  const t=e.target, k=e.key;
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  if((t.tagName==='BUTTON'||t.tagName==='INPUT') && (k===' '||k==='Enter')) return;
+  if(['ArrowRight','ArrowDown','PageDown',' ','Enter','n','N'].includes(k)){e.preventDefault();proximo();}
+  else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(k)){e.preventDefault();anterior();}
+  else if(k==='Home') ir(0); else if(k==='End') ir(slides.length-1,Infinity);
+  else if(k==='t'||k==='T') alternarTema();
+  else if(k==='f'||k==='F') telaCheia();
+  else if(k==='s'||k==='S'||k==='p'||k==='P') abrirNotas();
+  else if(k==='?') $('#help').classList.toggle('on');
+  else if(k==='Escape') $('#help').classList.remove('on');
+}
+document.addEventListener('keydown',teclas);
+$('#bNext').onclick=proximo; $('#bPrev').onclick=anterior;
+$('#bHelp').onclick=()=>$('#help').classList.toggle('on');
+$('#help').onclick=e=>{if(e.target.id==='help')e.currentTarget.classList.remove('on');};
+$('#bFull').onclick=telaCheia; $('#bNotes').onclick=abrirNotas; $('#bTheme').onclick=alternarTema;
+function telaCheia(){ document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{}); }
+
+/* Escala do palco */
+function ajustar(){ const s=Math.min(innerWidth/1280,innerHeight/720); stage.style.transform=`translate(-50%,-50%) scale(${s})`; }
+addEventListener('resize',ajustar); ajustar();
+
+/* Barra some quando o mouse para */
+let tUI;
+addEventListener('mousemove',()=>{
+  document.body.classList.add('ui-on'); document.body.classList.remove('idle');
+  clearTimeout(tUI); tUI=setTimeout(()=>{document.body.classList.remove('ui-on');document.body.classList.add('idle');},2500);
+});
+
+/* ---------- Tema ---------- */
+const SOL='<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const LUA='<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+function tema(t){
+  document.documentElement.dataset.theme=t;
+  $('#iTheme').innerHTML= t==='dark'?SOL:LUA;
+  try{localStorage.setItem('aula-poo-tema',t);}catch(e){}
+}
+function alternarTema(){ tema(document.documentElement.dataset.theme==='dark'?'light':'dark'); }
+let salvo='dark'; try{salvo=localStorage.getItem('aula-poo-tema')||'dark';}catch(e){}
+tema(salvo);
+
+/* ---------- Notas do apresentador (janela separada) ---------- */
+let pres=null; const t0=Date.now();
+function abrirNotas(){
+  if(pres&&!pres.closed){pres.focus();return;}
+  pres=window.open('','notas-aula-poo','width=980,height=640');
+  if(!pres){alert('O navegador bloqueou a janela. Permita pop-ups para este arquivo.');return;}
+  pres.document.open();
+  pres.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Notas · POO Estacionamento</title>
+  <style>
+   body{margin:0;background:#0e1116;color:#e9edf2;font:18px/1.55 "Segoe UI",system-ui,sans-serif;display:grid;grid-template-rows:auto 1fr auto;height:100vh}
+   header{display:flex;gap:20px;align-items:center;padding:14px 22px;background:#151a21;border-bottom:1px solid #2a323d}
+   #pn{font:700 15px Consolas,monospace;color:#9aa5b4} #pt{font-weight:800;font-size:22px;flex:1}
+   #tm{font:700 26px Consolas,monospace;color:#f5c518}
+   main{padding:20px 26px;overflow:auto;font-size:22px} main b{color:#f5c518} main p{margin:0 0 14px}
+   footer{display:flex;gap:14px;align-items:center;padding:12px 22px;background:#151a21;border-top:1px solid #2a323d;color:#9aa5b4;font-size:16px}
+   footer b{color:#e9edf2} button{font:700 16px system-ui;padding:10px 18px;border-radius:9px;border:1px solid #2a323d;background:#1c222b;color:#e9edf2;cursor:pointer}
+   #ps{margin-left:auto}
+  </style></head><body>
+  <header><span id="pn"></span><span id="pt"></span><span id="tm">00:00</span></header>
+  <main id="pnotes"></main>
+  <footer><button id="bp">◀ Voltar</button><button id="bn">Avançar ▶</button><span>Próximo: <b id="px"></b></span><span id="ps"></span></footer>
+  </body></html>`);
+  pres.document.close();
+  pres.document.addEventListener('keydown',teclas);
+  pres.document.getElementById('bn').onclick=proximo;
+  pres.document.getElementById('bp').onclick=anterior;
+  atualizarNotas();
+}
+const tituloDe=s=>s?(s.dataset.title||($('h2',s)||$('h1',s)||{}).textContent||''):'— fim —';
+function atualizarNotas(){
+  if(!pres||pres.closed) return;
+  const d=pres.document, s=slides[cur], n=$('aside.notes',s);
+  d.getElementById('pn').textContent=`${cur+1} / ${slides.length}`;
+  d.getElementById('pt').textContent=tituloDe(s);
+  d.getElementById('pnotes').innerHTML=n?n.innerHTML:'<p>(sem notas)</p>';
+  d.getElementById('px').textContent=tituloDe(slides[cur+1]);
+  const tot=s._grupos.length;
+  d.getElementById('ps').textContent= tot?`passo ${step} de ${tot}`:'';
+}
+setInterval(()=>{
+  if(!pres||pres.closed) return;
+  const t=Math.floor((Date.now()-t0)/1000);
+  pres.document.getElementById('tm').textContent=String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
+},1000);
+
+/* ---------- Simulador ligado ao código ---------- */
+const sim={disp:true,ocupado:false};
+const simCode=$('#simCode'), simSpot=$('#simSpot'), simCon=$('#simConsole'), memVal=$('#memVal'), memDisp=$('#memDisp');
+const espera=ms=>new Promise(r=>setTimeout(r,ms));
+const L=n=>$(`.ln[data-n="${n}"]`,simCode);
+let veloc=1;
+function limparLinhas(){ $$('.ln',simCode).forEach(l=>{l.classList.remove('run','run-ok','run-no');l.querySelector('.eval')?.remove();}); simCode.classList.remove('focus'); }
+function marcar(n,cls='run'){ const l=L(n); l.classList.add(cls); simCode.classList.add('focus'); l.classList.add('hl'); }
+function avaliar(n,txt,ok){ const s=document.createElement('span'); s.className='eval '+(ok?'ok':'no'); s.textContent=txt; L(n).appendChild(s); }
+function imprimir(txt,cls=''){
+  const d=document.createElement('div'); if(cls)d.className=cls; d.textContent=txt; simCon.appendChild(d);
+  while(simCon.scrollHeight>simCon.clientHeight && simCon.children.length>1) simCon.firstChild.remove();
+}
+function definirDisp(v){
+  sim.disp=v; memVal.textContent=String(v); memVal.className=v?'g':'r';
+  memDisp.classList.add('flash'); setTimeout(()=>memDisp.classList.remove('flash'),700);
+  pintarVaga(simSpot,v);
+}
+function travar(on){ sim.ocupado=on; $$('#sSim .btn').forEach(b=>b.disabled=on&&b.dataset.act!=='reset'); }
+let geracao=0; const CANCELADO={};
+async function pausa(ms){ const g=geracao; await espera(ms); if(g!==geracao) throw CANCELADO; }
+
+async function executar(metodo){
+  limparLinhas(); $$('.ln',simCode).forEach(l=>l.classList.remove('hl'));
+  const E=metodo==='estacionar';
+  const cab=E?1:10, cond=E?2:11, a=E?3:12, p=E?4:13, els=E?6:15;
+  marcar(cab); await pausa(450*veloc);
+  const entra=E?sim.disp:!sim.disp;
+  marcar(cond, entra?'run-ok':'run-no');
+  avaliar(cond, E ? (sim.disp?'true → entra no if':'false → vai pro else')
+                  : (sim.disp?'!true = false → else':'!false = true → entra no if'), entra);
+  await pausa(900*veloc);
+  if(entra){
+    marcar(a,'run-ok'); definirDisp(!E); await pausa(650*veloc);
+    marcar(p,'run-ok');
+    imprimir(E?'Entrada registrada! Veículo estacionado na vaga A-15.':'Saída registrada! Vaga A-15 liberada.');
+  }else{
+    marcar(els,'run-no');
+    imprimir(E?'Vaga já ocupada':'A vaga não está ocupada','e');
+  }
+  await pausa(500*veloc);
+}
+async function acao(act){
+  if(act==='reset'){ simReset(); return; }
+  if(sim.ocupado) return;
+  try{
+    if(act==='estacionar'||act==='retirar'){ travar(true); await executar(act); }
+    else if(act==='testes'){
+      simReset(true); travar(true); veloc=.75;
+      const T=[['--- Teste 1: estacionar (1ª vez) ---','estacionar'],['--- Teste 2: estacionar de novo ---','estacionar'],
+               ['--- Teste 3: retirar veículo (1ª vez) ---','retirar'],['--- Teste 4: retirar de novo ---','retirar']];
+      for(const [cab,m] of T){ imprimir(cab,'h'); await pausa(300); await executar(m); }
+      limparLinhas(); imprimir('--- Teste 5: disponibilidade final ---','h');
+      memDisp.classList.add('flash'); setTimeout(()=>memDisp.classList.remove('flash'),900);
+      imprimir('Vaga disponível? '+sim.disp);
+    }
+    travar(false);
+  }catch(e){ if(e!==CANCELADO) throw e; }
+  finally{ veloc=1; }
+}
+function simReset(silencioso){
+  geracao++; travar(false); limparLinhas(); $$('.ln',simCode).forEach(l=>l.classList.remove('hl'));
+  simCon.innerHTML=''; sim.disp=true; memVal.textContent='true'; memVal.className='g'; pintarVaga(simSpot,true);
+  if(!silencioso) imprimir('// vaga criada com setDisponivel(true)','h');
+}
+$$('#sSim .btn').forEach(b=>b.addEventListener('click',()=>{acao(b.dataset.act);b.blur();}));
+
+/* ---------- Início ---------- */
+function lerHash(){ const m=location.hash.match(/#\/(\d+)/); return m?+m[1]-1:0; }
+addEventListener('hashchange',()=>{ const n=lerHash(); if(n!==cur) ir(n); });
+slides.forEach(s=>s.classList.remove('active'));
+cur=lerHash(); ir(cur, /todos/.test(location.search)?Infinity:0);
+})();
+</script>
+</body>
+</html>
